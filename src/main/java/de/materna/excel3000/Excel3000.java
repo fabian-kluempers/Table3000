@@ -2,7 +2,15 @@ package de.materna.excel3000;
 
 import com.google.common.collect.Maps;
 import io.vavr.control.Option;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 
@@ -60,7 +68,7 @@ public class Excel3000 {
       if (ExpressionUtil.isFormula(expression)) {
         if (marked.contains(index)) throw new IllegalStateException("Circuit found");
         marked.add(index);
-        Map<String,Double> vars = ExpressionUtil.getVars(expression, TableIndex.INDEXING_PATTERN).toMap(
+        Map<String, Double> vars = ExpressionUtil.getVars(expression, TableIndex.INDEXING_PATTERN).toMap(
             Function.identity(),
             key -> Double.valueOf(evaluateCell(TableIndex.ofExcelFormat(key), old, marked))
         ).toJavaMap();
@@ -72,6 +80,19 @@ public class Excel3000 {
       return result;
     } else {
       return value.get();
+    }
+  }
+
+  public void export(OutputStream out) throws IOException {
+    try (Workbook sheets = new XSSFWorkbook()) {
+      Sheet sheet = sheets.createSheet();
+      for (Map.Entry<TableIndex, String> entry : table.entrySet()) {
+        sheet
+            .createRow(entry.getKey().row)
+            .createCell(entry.getKey().col, CellType.STRING)
+            .setCellValue(entry.getValue());
+      }
+      sheets.write(out);
     }
   }
 }
