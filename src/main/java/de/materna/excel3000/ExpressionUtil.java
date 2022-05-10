@@ -1,24 +1,31 @@
 package de.materna.excel3000;
 
-import io.vavr.collection.List;
+import de.materna.util.TailCall;
+import de.materna.util.TailRec;
+
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
 import net.objecthunter.exp4j.ExpressionBuilder;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ExpressionUtil {
   public static Set<String> getVars(String expression, Pattern variablePattern) {
-    List<String> result = List.empty();
-    Matcher matcher = Pattern.compile("\\$(" + variablePattern.pattern() + ")").matcher(expression);
-    while (matcher.find()) {
-      result = result.append(matcher.group(1));
-    }
-    return result.toJavaSet();
+    return tailRecGetVars(
+        HashSet.empty(),
+        Pattern.compile("\\$(" + variablePattern.pattern() + ")").matcher(expression)
+    ).invoke();
   }
 
-  public static Double evaluate(String expression, Map<String,Double> vars) {
+  private static TailCall<Set<String>> tailRecGetVars(Set<String> result, Matcher matcher) {
+    return !matcher.find()
+        ? TailRec.done(result)
+        : TailRec.call(() -> tailRecGetVars(result.add(matcher.group(1)), matcher));
+  }
+
+  public static Double evaluate(String expression, Map<String, Double> vars) {
     return new ExpressionBuilder(expression)
         .variables(vars.keySet())
         .build()

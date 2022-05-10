@@ -4,6 +4,8 @@ import com.google.common.collect.Maps;
 import io.vavr.control.Option;
 
 import java.util.*;
+import java.util.function.Function;
+
 
 public class Excel3000 {
   private final Map<TableIndex, String> table;
@@ -43,30 +45,33 @@ public class Excel3000 {
 
   public Excel3000 evaluate() {
     Excel3000 result = new Excel3000();
-    Deque<Map.Entry<TableIndex, String>> work = new ArrayDeque<>(table.entrySet());
-    while (!work.isEmpty()) {
-      Map.Entry<TableIndex, String> current = work.remove();
-      String formula = current.getValue();
-      if (ExpressionUtil.isFormula(formula)) {
-        // get vars
-        Set<String> vars = ExpressionUtil.getVars(formula, TableIndex.INDEXING_PATTERN);
-        formula = ExpressionUtil.toCanonicalForm(formula);
-
-        // calc var assignments
-        Map<String, Double> assignments = new HashMap<>();
-        for (String variable : vars) {
-          assert (!ExpressionUtil.isFormula(variable));
-          assignments.put(variable, ExpressionUtil.evaluate(getCell(variable).get()));
-          result.setCell(variable, String.valueOf(assignments.get(variable)));
-        }
-
-        // calc formula
-        result.setCell(current.getKey(), String.valueOf(ExpressionUtil.evaluate(formula, assignments)));
-      } else {
-        // calc expression
-        result.setCell(current.getKey(), String.valueOf(ExpressionUtil.evaluate(formula)));
-      }
+    HashSet<TableIndex> marked = new HashSet<>();
+    for (TableIndex index : table.keySet()) {
+      result.evaluateCell(index, this, marked);
     }
     return result;
+  }
+
+  public String evaluateCell(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
+    Option<String> value = getCell(index);
+    if (!value.isDefined()) {
+      String expression = old.getCell(index).get();
+      String result;
+      if (ExpressionUtil.isFormula(expression)) {
+        if (marked.contains(index)) throw new IllegalStateException("Circuit found");
+        marked.add(index);
+        Map<String,Double> vars = ExpressionUtil.getVars(expression, TableIndex.INDEXING_PATTERN).toMap(
+            Function.identity(),
+            key -> Double.valueOf(evaluateCell(TableIndex.ofExcelFormat(key), old, marked))
+        ).toJavaMap();
+        result = String.valueOf(ExpressionUtil.evaluate(ExpressionUtil.toCanonicalForm(expression), vars));
+      } else {
+        result = String.valueOf(ExpressionUtil.evaluate(expression));
+      }
+      setCell(index, result);
+      return result;
+    } else {
+      return value.get();
+    }
   }
 }

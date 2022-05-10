@@ -30,7 +30,7 @@ public class TableIndex {
     return Objects.hash(row, col);
   }
 
-  public static final Pattern INDEXING_PATTERN = Pattern.compile("([a-zA-Z]+)([0-9]+)");
+  public static final Pattern INDEXING_PATTERN = Pattern.compile("([a-zA-Z]+)([1-9][0-9]*)");
 
   public final int row;
   public final int col;
