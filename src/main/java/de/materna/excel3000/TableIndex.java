@@ -1,4 +1,4 @@
-package de.materna.excel300;
+package de.materna.excel3000;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;

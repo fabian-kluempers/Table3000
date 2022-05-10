@@ -1,5 +1,9 @@
 package de.materna.util;
 
+/**
+ * inspired by Venkat Subramaniam
+ * @see TailCall
+ */
 public class TailRec {
   private TailRec() {
 

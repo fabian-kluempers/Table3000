@@ -1,8 +1,7 @@
-package de.materna.excel300;
+package de.materna.excel3000;
 
 import com.google.common.collect.Maps;
 import io.vavr.control.Option;
-import io.vavr.control.Try;
 
 import java.util.*;
 

@@ -1,4 +1,4 @@
-package de.materna.excel300;
+package de.materna.excel3000;
 
 import io.vavr.collection.List;
 import net.objecthunter.exp4j.ExpressionBuilder;
