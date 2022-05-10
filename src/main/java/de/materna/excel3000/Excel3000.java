@@ -9,8 +9,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 
@@ -38,14 +36,19 @@ public class Excel3000 {
     return Option.of(table.get(index));
   }
 
+  /**
+   * @param index the {@link TableIndex}.
+   * @throws IllegalArgumentException if index does not conform to {@link TableIndex#INDEXING_PATTERN}.
+   * @return the value at the specified index or none.
+   */
   public Option<String> getCell(String index) {
     return getCell(TableIndex.ofExcelFormat(index));
   }
 
   /**
-   * @param index
-   * @param value
-   * @throws IllegalArgumentException
+   * @param index the {@link TableIndex}.
+   * @param value the value.
+   * @throws IllegalArgumentException if index does not conform to {@link TableIndex#INDEXING_PATTERN}.
    */
   public void setCell(String index, String value) {
     setCell(TableIndex.ofExcelFormat(index), value);
