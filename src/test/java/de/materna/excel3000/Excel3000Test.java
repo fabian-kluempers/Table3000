@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class Excel3000Test {
-  @Test public void evaluate() {
+  @Test void evaluate() {
     Excel3000 subject = new Excel3000();
     subject.setCell("A1", "7 + 5");
     subject.setCell("ZB5", "2");
@@ -16,10 +16,9 @@ class Excel3000Test {
     assertEquals("11.0", subject.getCell("A2").get());
   }
 
-  @Test public void setAndGet() {
+  @Test void setAndGet() {
     Excel3000 subject = new Excel3000();
     subject.setCell("A1", "7 + 5");
     assertEquals("7 + 5", subject.getCell("A1").get());
   }
-
 }

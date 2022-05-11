@@ -29,6 +29,10 @@ public class Excel3000 {
     table.put(index, Expression.of(value));
   }
 
+  private void setCell(TableIndex index, Expression expression) {
+    table.put(index, expression);
+  }
+
   public Optional<String> getCell(int row, int col) {
     return getCell(TableIndex.of(row, col)).map(Expression::toString);
   }
@@ -68,16 +72,15 @@ public class Excel3000 {
     return result;
   }
 
-  private String evaluateCell(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
+  private Expression evaluateCell(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
     Optional<Expression> value = getCell(index);
     if (value.isPresent()) { // don't need to evaluate
-      return value.get().toString();
+      return value.get();
     } else {
       Expression expression = old.getCell(index).orElseThrow();
-      String result;
       if (!expression.isFormula()) {
         // non formulas can be evaluated directly
-        result = String.valueOf(expression.evaluate());
+        expression = expression.evaluate();
       } else {
         // break circuit
         if (marked.contains(index)) throw new IllegalStateException();
@@ -87,13 +90,13 @@ public class Excel3000 {
             .stream()
             .collect(toMap(
                 Function.identity(),
-                key -> Double.valueOf(evaluateCell(TableIndex.ofExcelFormat(key), old, marked))
+                key -> evaluateCell(TableIndex.ofExcelFormat(key), old, marked).getResult()
             ));
         // evaluate formula with assigned variables
-        result = String.valueOf(expression.toCanonicalForm().evaluate(vars));
+        expression = expression.evaluate(vars);
       }
-      setCell(index, result);
-      return result;
+      setCell(index, expression);
+      return expression;
     }
   }
 
