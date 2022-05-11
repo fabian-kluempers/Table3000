@@ -75,7 +75,10 @@ public class Excel3000 {
     } else {
       Expression expression = old.getCell(index).orElseThrow();
       String result;
-      if (expression.isFormula()) {
+      if (!expression.isFormula()) {
+        // non formulas can be evaluated directly
+        result = String.valueOf(expression.evaluate());
+      } else {
         // break circuit
         if (marked.contains(index)) throw new IllegalStateException();
         marked.add(index);
@@ -86,10 +89,8 @@ public class Excel3000 {
                 Function.identity(),
                 key -> Double.valueOf(evaluateCell(TableIndex.ofExcelFormat(key), old, marked))
             ));
+        // evaluate formula with assigned variables
         result = String.valueOf(expression.toCanonicalForm().evaluate(vars));
-      } else {
-        // non formulas can be evaluated directly
-        result = String.valueOf(expression.evaluate());
       }
       setCell(index, result);
       return result;
