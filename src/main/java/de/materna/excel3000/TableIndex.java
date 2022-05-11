@@ -6,6 +6,7 @@ import com.google.common.math.IntMath;
 import de.materna.util.StreamUtil;
 import de.materna.util.TailCall;
 import de.materna.util.TailRec;
+
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,23 +59,6 @@ public class TableIndex {
       col += IntMath.pow(alphabet.size(), chars.length() - i - 1) * alphabet.get(chars.charAt(i));
     }
     return col;
-  }
-
-
-  private static int getCol(String chars) {
-    return getCol(chars, 0).invoke();
-  }
-
-  private static TailCall<Integer> getCol(String chars, int i) {
-    if (chars.length() == 0) {
-      return TailRec.done(i);
-    }
-    return TailRec.call(() ->
-        getCol(
-            chars.substring(1),
-            i + IntMath.pow(alphabet.size(), chars.length() - 1) * alphabet.get(chars.charAt(0))
-        )
-    );
   }
 
   public String toExcelFormat() {
