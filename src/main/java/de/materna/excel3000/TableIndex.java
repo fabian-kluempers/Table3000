@@ -3,21 +3,22 @@ package de.materna.excel3000;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.math.IntMath;
+import de.materna.util.StreamUtil;
 import de.materna.util.TailCall;
 import de.materna.util.TailRec;
-
-import io.vavr.collection.Stream;
-import io.vavr.control.Option;
-
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class TableIndex {
-  private static final BiMap<Character, Integer> alphabet = Stream.rangeClosed('a', 'z')
-      .zip(Stream.iterate(1, i -> i + 1))
-      .foldLeft(new ImmutableBiMap.Builder<Character, Integer>(), (map, value) -> map.put(value.toEntry()))
-      .build();
+  private static final BiMap<Character, Integer> alphabet = StreamUtil.zip(IntStream.rangeClosed('a', 'z').boxed(), Stream.iterate(1, i -> ++i))
+      .reduce(
+          new ImmutableBiMap.Builder<Character, Integer>(),
+          (builder, pair) -> builder.put((char) pair.first.intValue(), pair.second),
+          (builder1, builder2) -> builder1.putAll(builder2.build())
+      ).build();
 
   @Override public boolean equals(Object o) {
     if (this == o) return true;
@@ -45,10 +46,10 @@ public class TableIndex {
   }
 
   public static TableIndex ofExcelFormat(String value) {
-    return Option.of(INDEXING_PATTERN.matcher(value))
+    return Optional.of(INDEXING_PATTERN.matcher(value))
         .filter(Matcher::matches)
         .map(matcher -> TableIndex.of(getColIterative(matcher.group(1).toLowerCase()), Integer.parseInt(matcher.group(2))))
-        .getOrElseThrow(() -> new IllegalArgumentException("Value " + value + " does not match pattern " + INDEXING_PATTERN.pattern()));
+        .orElseThrow(() -> new IllegalArgumentException("Value " + value + " does not match pattern " + INDEXING_PATTERN.pattern()));
   }
 
   private static int getColIterative(String chars) {
@@ -78,13 +79,7 @@ public class TableIndex {
 
   public String toExcelFormat() {
     //TODO broken
-    List list = new ArrayList<Character>();
-    int tempCol = col;
-    while (tempCol > 1) {
-      list.add(alphabet.inverse().get(tempCol % alphabet.size()));
-      tempCol %= alphabet.size();
-    }
-    return list.toString();
+    return null;
   }
 
   @Override public String toString() {
