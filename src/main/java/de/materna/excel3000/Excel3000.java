@@ -1,7 +1,6 @@
 package de.materna.excel3000;
 
 import com.google.common.collect.Maps;
-import io.vavr.control.Option;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -12,9 +11,11 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.function.Function;
 
+import static java.util.stream.Collectors.*;
+
 
 public class Excel3000 {
-  private final Map<TableIndex, String> table;
+  private final Map<TableIndex, Expression> table;
 
   public Excel3000() {
     this.table = Maps.newHashMap();
@@ -24,25 +25,25 @@ public class Excel3000 {
     setCell(TableIndex.of(row, col), value);
   }
 
-  public void setCell(TableIndex index, String value) {
-    table.put(index, value);
+  private void setCell(TableIndex index, String value) {
+    table.put(index, Expression.of(value));
   }
 
-  public Option<String> getCell(int row, int col) {
-    return getCell(TableIndex.of(row, col));
+  public Optional<String> getCell(int row, int col) {
+    return getCell(TableIndex.of(row, col)).map(Expression::toString);
   }
 
-  public Option<String> getCell(TableIndex index) {
-    return Option.of(table.get(index));
+  private Optional<Expression> getCell(TableIndex index) {
+    return Optional.ofNullable(table.get(index));
   }
 
   /**
    * @param index the {@link TableIndex}.
-   * @throws IllegalArgumentException if index does not conform to {@link TableIndex#INDEXING_PATTERN}.
    * @return the value at the specified index or none.
+   * @throws IllegalArgumentException if index does not conform to {@link TableIndex#INDEXING_PATTERN}.
    */
-  public Option<String> getCell(String index) {
-    return getCell(TableIndex.ofExcelFormat(index));
+  public Optional<String> getCell(String index) {
+    return getCell(TableIndex.ofExcelFormat(index)).map(Expression::toString);
   }
 
   /**
@@ -58,42 +59,48 @@ public class Excel3000 {
     Excel3000 result = new Excel3000();
     HashSet<TableIndex> marked = new HashSet<>();
     for (TableIndex index : table.keySet()) {
-      result.evaluateCell(index, this, marked);
+      try {
+        result.evaluateCellImperative(index, this, marked);
+      } catch (IllegalStateException e) {
+        throw new IllegalStateException("Circuit encountered while evaluating " + index);
+      }
     }
     return result;
   }
 
-  public String evaluateCell(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
-    Option<String> value = getCell(index);
-    if (!value.isDefined()) {
-      String expression = old.getCell(index).get();
+  private String evaluateCellImperative(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
+    Optional<Expression> value = getCell(index);
+    if (value.isEmpty()) {
+      Expression expression = old.getCell(index).orElseThrow();
       String result;
-      if (ExpressionUtil.isFormula(expression)) {
-        if (marked.contains(index)) throw new IllegalStateException("Circuit found");
+      if (expression.isFormula()) {
+        if (marked.contains(index)) throw new IllegalStateException();
         marked.add(index);
-        Map<String, Double> vars = ExpressionUtil.getVars(expression, TableIndex.INDEXING_PATTERN).toMap(
-            Function.identity(),
-            key -> Double.valueOf(evaluateCell(TableIndex.ofExcelFormat(key), old, marked))
-        ).toJavaMap();
-        result = String.valueOf(ExpressionUtil.evaluate(ExpressionUtil.toCanonicalForm(expression), vars));
+        Map<String, Double> vars = expression.getVars(TableIndex.INDEXING_PATTERN)
+            .stream()
+            .collect(toMap(
+                Function.identity(),
+                key -> Double.valueOf(evaluateCellImperative(TableIndex.ofExcelFormat(key), old, marked))
+            ));
+        result = String.valueOf(expression.toCanonicalForm().evaluate(vars));
       } else {
-        result = String.valueOf(ExpressionUtil.evaluate(expression));
+        result = String.valueOf(expression.evaluate());
       }
       setCell(index, result);
       return result;
     } else {
-      return value.get();
+      return value.get().toString();
     }
   }
 
   public void export(OutputStream out) throws IOException {
     try (Workbook sheets = new XSSFWorkbook()) {
       Sheet sheet = sheets.createSheet();
-      for (Map.Entry<TableIndex, String> entry : table.entrySet()) {
+      for (Map.Entry<TableIndex, Expression> entry : table.entrySet()) {
         sheet
             .createRow(entry.getKey().row)
             .createCell(entry.getKey().col, CellType.STRING)
-            .setCellValue(entry.getValue());
+            .setCellValue(entry.getValue().toString());
       }
       sheets.write(out);
     }
