@@ -1,14 +1,14 @@
 package de.materna.util;
 
-import java.util.Iterator;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import com.google.common.collect.Streams;
+
+import java.util.function.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class StreamUtil {
   private StreamUtil() {
-    
+
   }
 
   public static <T, U, R> Stream<R> zipWith(
@@ -16,12 +16,11 @@ public class StreamUtil {
       Stream<U> bs,
       BiFunction<T, U, R> zipper
   ) {
-    Iterator<U> itr = bs.iterator();
-    return as.filter(a -> itr.hasNext()).map(a -> zipper.apply(a, itr.next()));
+    return Streams.zip(as, bs, zipper);
   }
 
   @SuppressWarnings("All") // suppress "can convert to record"
-  static class Pair<T, U> {
+  public static class Pair<T, U> {
     public final T first;
     public final U second;
 
@@ -40,6 +39,13 @@ public class StreamUtil {
 
     public Pair<U, T> flip() {
       return new Pair<>(second, first);
+    }
+
+    @Override public String toString() {
+      return "Pair{" +
+          "first=" + first +
+          ", second=" + second +
+          '}';
     }
   }
 
