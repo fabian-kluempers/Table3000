@@ -60,7 +60,7 @@ public class Excel3000 {
     HashSet<TableIndex> marked = new HashSet<>();
     for (TableIndex index : table.keySet()) {
       try {
-        result.evaluateCellImperative(index, this, marked);
+        result.evaluateCell(index, this, marked);
       } catch (IllegalStateException e) {
         throw new IllegalStateException("Circuit encountered while evaluating " + index);
       }
@@ -68,28 +68,31 @@ public class Excel3000 {
     return result;
   }
 
-  private String evaluateCellImperative(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
+  private String evaluateCell(TableIndex index, Excel3000 old, Set<TableIndex> marked) {
     Optional<Expression> value = getCell(index);
-    if (value.isEmpty()) {
+    if (value.isPresent()) { // don't need to evaluate
+      return value.get().toString();
+    } else {
       Expression expression = old.getCell(index).orElseThrow();
       String result;
       if (expression.isFormula()) {
+        // break circuit
         if (marked.contains(index)) throw new IllegalStateException();
         marked.add(index);
+        // calc var assignments by recursively evaluating
         Map<String, Double> vars = expression.getVars(TableIndex.INDEXING_PATTERN)
             .stream()
             .collect(toMap(
                 Function.identity(),
-                key -> Double.valueOf(evaluateCellImperative(TableIndex.ofExcelFormat(key), old, marked))
+                key -> Double.valueOf(evaluateCell(TableIndex.ofExcelFormat(key), old, marked))
             ));
         result = String.valueOf(expression.toCanonicalForm().evaluate(vars));
       } else {
+        // non formulas can be evaluated directly
         result = String.valueOf(expression.evaluate());
       }
       setCell(index, result);
       return result;
-    } else {
-      return value.get().toString();
     }
   }
 
