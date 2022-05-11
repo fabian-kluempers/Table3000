@@ -1,7 +1,6 @@
 package de.materna.util;
 
-import com.google.common.collect.Streams;
-
+import java.util.Iterator;
 import java.util.function.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -16,7 +15,8 @@ public class StreamUtil {
       Stream<U> bs,
       BiFunction<T, U, R> zipper
   ) {
-    return Streams.zip(as, bs, zipper);
+    Iterator<U> itr = bs.iterator();
+    return as.takeWhile(a -> itr.hasNext()).map(a -> zipper.apply(a, itr.next()));
   }
 
   @SuppressWarnings("All") // suppress "can convert to record"
