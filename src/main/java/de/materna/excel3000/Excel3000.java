@@ -13,7 +13,6 @@ import java.util.function.Function;
 
 import static java.util.stream.Collectors.*;
 
-
 public class Excel3000 {
   private final Map<TableIndex, Expression> table;
 
@@ -79,25 +78,28 @@ public class Excel3000 {
     } else {
       Expression expression = old.getCell(index).orElseThrow();
       if (!expression.isFormula()) {
-        // non formulas can be evaluated directly
-        expression = expression.evaluate();
+        expression = expression.isEvaluated() ? expression : expression.evaluate();
       } else {
-        // break circuit
-        if (marked.contains(index)) throw new IllegalStateException();
-        marked.add(index);
-        // calc var assignments by recursively evaluating
-        Map<String, Double> vars = expression.getVars(TableIndex.INDEXING_PATTERN)
-            .stream()
-            .collect(toMap(
-                Function.identity(),
-                key -> evaluateCell(TableIndex.ofExcelFormat(key), old, marked).getResult()
-            ));
-        // evaluate formula with assigned variables
-        expression = expression.evaluate(vars);
+        breakCircuit(index, marked);
+        expression = expression.evaluate(evaluateVarsRec(old, marked, expression));
       }
       setCell(index, expression);
       return expression;
     }
+  }
+
+  private Map<String, Double> evaluateVarsRec(Excel3000 old, Set<TableIndex> marked, Expression expression) {
+    return expression.getVars(TableIndex.INDEXING_PATTERN)
+        .stream()
+        .collect(toMap(
+            Function.identity(),
+            key -> evaluateCell(TableIndex.ofExcelFormat(key), old, marked).getResult()
+        ));
+  }
+
+  private void breakCircuit(TableIndex index, Set<TableIndex> marked) {
+    if (marked.contains(index)) throw new IllegalStateException();
+    marked.add(index);
   }
 
   public void export(OutputStream out) throws IOException {
